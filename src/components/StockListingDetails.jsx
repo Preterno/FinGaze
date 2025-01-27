@@ -1,111 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { MoreHorizontal, Edit, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-toastify";
 
 const StockListingDetails = () => {
-  const stocks = [
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Adidas AG",
-      symbol: "ADS",
-      investDate: "Apr 12, 2024",
-      volume: "534,911",
-      change: "+1.2%",
-      changePositive: true,
-      pricePerStock: "$53.4912",
-      numberOfStocks: "100.000 Lots",
-    },
-    {
-      name: "Apple Inc",
-      symbol: "AAPL",
-      investDate: "Apr 11, 2024",
-      volume: "4,324,800",
-      change: "+2.2%",
-      changePositive: true,
-      pricePerStock: "$216.2416",
-      numberOfStocks: "20.000 Lots",
-    },
-    {
-      name: "Twitter Inc",
-      symbol: "TWTR",
-      investDate: "Apr 10, 2024",
-      volume: "534,911",
-      change: "-1.5%",
-      pricePerStock: "$53.7031",
-      numberOfStocks: "100.000 Lots",
-      changePositive: false,
-    },
-  ];
-
+  const [stocks, setStocks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStock, setCurrentStock] = useState(null);
   const [editedStockName, setEditedStockName] = useState("");
@@ -113,6 +13,26 @@ const StockListingDetails = () => {
   const modalRef = useRef(null);
   const [dropdownOpen, setDropdownOpen] = useState(null);
   const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    // Fetch stock details
+    const fetchStocks = async () => {
+      try {
+        const base_url = import.meta.env.VITE_API_BASE_URL;
+        console.log(base_url);
+        const response = await fetch(base_url + "api/stocks/list");
+        const data = await response.json();
+        setStocks(data);
+      } catch (error) {
+        console.error("Error fetching stocks:", error);
+        toast.error("Error fetching stocks data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStocks();
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -152,34 +72,96 @@ const StockListingDetails = () => {
 
   const openModal = (stock) => {
     setCurrentStock(stock);
-    setEditedStockName(stock.name);
-    setEditedNumberOfStocks(stock.numberOfStocks);
+    setEditedStockName(stock.stockName);
+    setEditedNumberOfStocks(stock.noOfStocks);
     setIsModalOpen(true);
     setDropdownOpen(null);
   };
 
-  const handleUpdateStock = () => {
-    console.log("Updated Stock:", {
-      ...currentStock,
-      name: editedStockName,
-      numberOfStocks: editedNumberOfStocks,
-    });
+  const handleUpdateStock = async () => {
+    if (currentStock) {
+      const updatedStockData = {
+        id: currentStock.id,
+        currentDate: new Date().toISOString().split("T")[0],
+        currentPrice: parseFloat(currentStock.currentPrice),
+        noOfStocks: parseInt(editedNumberOfStocks, 10),
+      };
 
-    setIsModalOpen(false);
-    resetModal();
+      try {
+        const base_url = import.meta.env.VITE_API_BASE_URL;
+        const response = await fetch(base_url + "api/stocks/update", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updatedStockData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to update stock: ${response.statusText}`);
+        }
+
+        setStocks((prevStocks) =>
+          prevStocks.map((stock) =>
+            stock.id === currentStock.id
+              ? {
+                  ...stock,
+                  noOfStocks: updatedStockData.noOfStocks,
+                  investDate: updatedStockData.currentDate,
+                }
+              : stock
+          )
+        );
+        toast.success("Stock updated successfully");
+        console.log("Stock updated successfully:", updatedStockData);
+        setIsModalOpen(false);
+        resetModal();
+      } catch (error) {
+        toast.error("Error updating stock");
+        console.error("Error updating stock:", error);
+      }
+    }
   };
+
+  const handleDeleteStock = async (stockId) => {
+    try {
+      const base_url = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetch(`${base_url}api/stocks/${stockId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to delete stock: ${response.statusText}`);
+      }
+
+      toast.success("Stock deleted successfully");
+      console.log("Stock deleted successfully:", stockId);
+      setStocks((prevStocks) =>
+        prevStocks.filter((stock) => stock.id !== stockId)
+      );
+    } catch (error) {
+      toast.error("Error deleting stock");
+      console.error("Error deleting stock:", error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-accent text-2xl h-full flex justify-center items-center p-16">
+        <span className="loader"></span>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pt-4 relative">
-      <div className="grid grid-cols-[1.5fr_1fr_0.85fr_0.75fr_1fr_0.85fr_auto] text-lg font-medium text-accent border-b-2 pb-2 border-accent-border">
-        <div>Stock Name</div>
+      <div className="grid grid-cols-[1.75fr_1fr_0.95fr_0.75fr_1fr_1fr_auto] text-right text-lg font-medium text-accent border-b-2 pb-2 border-accent-border">
+        <div className="text-left">Stock Name</div>
         <div>Invest Date</div>
-        <div>Volume</div>
+        <div>Market Cap</div>
         <div>Change</div>
         <div>Price/Stock</div>
         <div>No of Stocks</div>
         <div>
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center pl-2">
             <button className="invisible p-2">
               <MoreHorizontal size={16} />
             </button>
@@ -194,32 +176,36 @@ const StockListingDetails = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="grid grid-cols-[1.5fr_1fr_0.85fr_0.75fr_1fr_0.85fr_auto] items-center py-4 text-lg border-b-2 text-white border-accent-border"
+            className="grid grid-cols-[1.75fr_1fr_0.95fr_0.75fr_1fr_1fr_auto] items-center py-4 text-lg border-b-2 text-white border-accent-border"
           >
             <div className="flex items-center gap-3">
               <div className="flex-shrink-0 w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center font-bold text-accent-border">
-                {stock.symbol[0]}
+                {stock.stockSymbol[0]}
               </div>
               <div className="flex flex-col">
-                <div className="font-medium leading-tight">{stock.name}</div>
-                <div className="text-accent text-sm">{stock.symbol}</div>
+                <div className="font-medium leading-tight">
+                  {stock.stockName}
+                </div>
+                <div className="text-accent text-sm">{stock.stockSymbol}</div>
               </div>
             </div>
 
-            <div>{stock.investDate}</div>
-            <div>{stock.volume}</div>
+            <div className="text-right">{stock.investDate}</div>
+            <div className="text-right">{stock.marketCapitalization}</div>
             <div
-              className={`font-medium  ${
-                stock.changePositive ? "text-yellow" : "text-dark-peach"
-              }`}
+              className={`font-medium ${
+                parseFloat(stock.change) > 0 ? "text-yellow" : "text-dark-peach"
+              } text-right`}
             >
-              {stock.change}
+              {stock.change > 0 ? "+" + stock.change : stock.change}%
             </div>
-            <div>{stock.pricePerStock}</div>
-            <div className="text-yellow">{stock.numberOfStocks}</div>
+            <div className="text-right">{stock.currentPrice}</div>
+            <div className="text-yellow text-right">
+              {stock.noOfStocks} Lots
+            </div>
 
             {/* Dropdown Button */}
-            <div className="relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center pl-2">
               <button
                 className="text-accent hover:bg-accent-border rounded-full p-2 transition-colors"
                 onClick={() => toggleDropdown(index)}
@@ -241,7 +227,8 @@ const StockListingDetails = () => {
                   <button
                     className="flex items-center w-full px-3 py-2 text-sm text-white hover:bg-dark-peach rounded-b-lg cursor-pointer"
                     onClick={() => {
-                      console.log("Delete clicked for", stock.name);
+                      console.log("Delete clicked for", stock.id);
+                      handleDeleteStock(stock.id);
                       setDropdownOpen(null);
                     }}
                   >
@@ -255,36 +242,21 @@ const StockListingDetails = () => {
       </AnimatePresence>
 
       {isModalOpen && currentStock && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div
             ref={modalRef}
             className="bg-light-black rounded-3xl p-8 shadow-[0_2px_4px_rgba(255,255,255,0.05),0_8px_16px_rgba(0,0,0,0.8),0_12px_24px_rgba(0,0,0,0.9)] w-[90%] max-w-lg"
           >
             <h2 className="text-2xl font-bold text-white mb-6">Edit Stock</h2>
 
-            <div className="space-y-4">
+            <div className="space-y-4 text-base">
               <div className="bg-light-gray p-4 rounded-xl text-white">
-                <p className="font-bold text-lg">{currentStock.symbol}</p>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <div>
-                    <p className="text-accent">Current Price</p>
-                    <p>{currentStock.pricePerStock}</p>
-                  </div>
-                  <div>
-                    <p className="text-accent">Current Volume</p>
-                    <p>{currentStock.volume}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-accent block mb-2">Stock Name</label>
-                <input
-                  type="text"
-                  value={editedStockName}
-                  onChange={(e) => setEditedStockName(e.target.value)}
-                  className="w-full bg-light-gray rounded-xl py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-yellow"
-                />
+                <p className="font-bold text-lg">{currentStock.stockName}</p>
+                <p className=" text-accent">
+                  Symbol: {currentStock.stockSymbol}
+                </p>
+                <p>Price: ${currentStock.currentPrice}</p>
+                <p>Market Cap: {currentStock.marketCapitalization}</p>
               </div>
 
               <div>
@@ -292,9 +264,10 @@ const StockListingDetails = () => {
                   Number of Stocks
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   value={editedNumberOfStocks}
                   onChange={(e) => setEditedNumberOfStocks(e.target.value)}
+                  min={1}
                   className="w-full bg-light-gray rounded-xl py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-yellow"
                 />
               </div>

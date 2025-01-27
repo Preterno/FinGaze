@@ -1,16 +1,13 @@
 import React from "react";
-import { AppProvider } from "./context/AppContext";
 import Dashboard from "./components/Dashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./toastify-custom.css";
-import { toast } from "react-toastify";
-// import Testing from "./components/testing";
+import "./loading.css";
 
 const App = () => {
-  toast.success("Hello");
   return (
-    <AppProvider>
+    <div>
       <Dashboard />
       <ToastContainer
         position="top-right"
@@ -24,7 +21,7 @@ const App = () => {
         pauseOnHover
         theme="dark"
       />
-    </AppProvider>
+    </div>
   );
 };
 

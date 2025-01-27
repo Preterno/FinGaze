@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
 import StockListingDetails from "./StockListingDetails";
 import { Plus, Search } from "lucide-react";
+import { toast } from "react-toastify";
 
 const StocksList = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [stockDetails, setStockDetails] = useState(null);
+  const [stockNotFound, setStockNotFound] = useState(false);
   const [numberOfStocks, setNumberOfStocks] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const modalRef = useRef(null);
@@ -39,27 +41,61 @@ const StocksList = () => {
     setStockDetails(null);
 
     try {
-      // Simulating an API call with a timeout
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      const fetchedStock = {
-        name: "Adidas AG",
-        symbol: "ADS",
-        price: "$53.4912",
-        volume: 5000,
-      }; // Replace this with actual API call results
-      setStockDetails(fetchedStock);
+      const base_url = import.meta.env.VITE_API_BASE_URL;
+      const response = await fetch(
+        `${base_url}api/stocks/details?symbol=${searchQuery.toUpperCase()}`
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch stock details: ${response.statusText}`
+        );
+      }
+
+      const fetchedStock = await response.json();
+      if (fetchedStock.stockName == "") {
+        setStockNotFound(true);
+      } else {
+        setStockNotFound(false);
+        setStockDetails(fetchedStock);
+      }
     } catch (error) {
       console.error("Error fetching stock details:", error);
+      toast.error("Error fetching stock details");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddStock = () => {
+  const handleAddStock = async () => {
     if (stockDetails && numberOfStocks > 0) {
-      console.log(`Added ${numberOfStocks} of ${stockDetails.name}`);
-      setIsModalOpen(false);
-      resetModal();
+      const stockData = {
+        stockSymbol: stockDetails.stockSymbol,
+        stockName: stockDetails.stockName,
+        oldPrice: parseFloat(stockDetails.currentPrice),
+        noOfStocks: numberOfStocks,
+      };
+      try {
+        const base_url = import.meta.env.VITE_API_BASE_URL;
+        const response = await fetch(base_url + "api/stocks/add", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(stockData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to add stock: ${response.statusText}`);
+        }
+        toast.success(
+          "Stock added successfully. Please refresh page to see the changes."
+        );
+        console.log("Stock added successfully:", stockData);
+        setIsModalOpen(false);
+        resetModal();
+      } catch (error) {
+        console.error("Error adding stock:", error);
+        toast.error("Error adding stock details");
+      }
     }
   };
 
@@ -106,13 +142,18 @@ const StocksList = () => {
               </div>
             </div>
             {isLoading && <p className="text-yellow text-center">Loading...</p>}
+            {!isLoading && stockNotFound && (
+              <p className="text-yellow text-center">Stock not found</p>
+            )}
             {stockDetails && (
               <div className="mb-6 text-base">
                 <div className="bg-light-gray p-4 rounded-xl text-white">
-                  <p className="font-bold text-lg">{stockDetails.name}</p>
-                  <p className=" text-accent">Symbol: {stockDetails.symbol}</p>
-                  <p>Price: ${stockDetails.price}</p>
-                  <p>Volume: {stockDetails.volume}</p>
+                  <p className="font-bold text-lg">{stockDetails.stockName}</p>
+                  <p className=" text-accent">
+                    Symbol: {stockDetails.stockSymbol}
+                  </p>
+                  <p>Price: ${stockDetails.currentPrice}</p>
+                  <p>Volume: {stockDetails.marketCap}</p>
                 </div>
                 <label className="text-accent mt-4 block">
                   Number of Stocks
