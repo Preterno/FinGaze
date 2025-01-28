@@ -106,6 +106,7 @@ const StockListingDetails = () => {
                   ...stock,
                   noOfStocks: updatedStockData.noOfStocks,
                   investDate: updatedStockData.currentDate,
+                  change: "0.0",
                 }
               : stock
           )
@@ -199,7 +200,7 @@ const StockListingDetails = () => {
             >
               {stock.change > 0 ? "+" + stock.change : stock.change}%
             </div>
-            <div className="text-right">{stock.currentPrice}</div>
+            <div className="text-right">${stock.currentPrice}</div>
             <div className="text-yellow text-right">
               {stock.noOfStocks} Lots
             </div>

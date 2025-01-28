@@ -10,7 +10,7 @@ import {
 } from "recharts";
 
 const PortfolioChart = () => {
-  const [selectedRange, setSelectedRange] = useState("7d");
+  const [selectedRange, setSelectedRange] = useState("3m");
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [portfolioValue, setPortfolioValue] = useState(0);
@@ -61,7 +61,7 @@ const PortfolioChart = () => {
   const getFilteredData = () => {
     if (selectedRange === "7d") return chartData.slice(-7);
     if (selectedRange === "1m") return chartData.slice(-30);
-    if (selectedRange === "3m") return chartData; // All 90 days
+    if (selectedRange === "3m") return chartData.slice(-90); // All 90 days
     return [];
   };
 
